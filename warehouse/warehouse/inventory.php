@@ -203,16 +203,13 @@ $result = mysqli_query($conn, $query);
 <body>
 
 <div class="sidebar">
-    <h2><?php echo $is_admin ? 'Admin Dashboard' : 'Staff Dashboard'; ?></h2>
-    <a href="<?php echo $is_admin ? 'admin_dashboard.php' : 'staff_dashboard.php'; ?>">Dashboard</a>
-    <?php if ($is_admin): ?>
-        <a href="manage_users.php">Manage Users</a>
-    <?php endif; ?>
+    <h2>Admin Dashboard</h2>
+    <a href="admin_dashboard.php">Dashboard</a>
+    <a href="manage_users.php">Manage Users</a>
+    <a href="manage_products.php">Manage Products</a>
     <a href="inventory.php">Manage Inventory</a>
     <a href="orders.php">Manage Orders</a>
-    <?php if ($is_admin): ?>
-        <a href="reports.php">Reports</a>
-    <?php endif; ?>
+    <a href="reports.php">Reports</a>
     <a href="warehouse_logout.php" class="logout">Logout</a>
 </div>
 

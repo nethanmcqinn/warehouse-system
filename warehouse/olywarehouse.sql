@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 02, 2025 at 01:52 PM
+-- Generation Time: Apr 02, 2025 at 05:16 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,6 +44,13 @@ CREATE TABLE `customers` (
   `status` enum('Active','Inactive') NOT NULL DEFAULT 'Active',
   `password` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `customers`
+--
+
+INSERT INTO `customers` (`customer_id`, `fname`, `lname`, `customer_name`, `email`, `phone`, `address_line1`, `address_line2`, `city`, `state`, `postal_code`, `country`, `join_date`, `status`, `password`) VALUES
+(1, 'customer', 'user', 'customer user', 'customer@google.com', '123', '', NULL, '', '', '', 'Malaysia', '2025-04-02', 'Active', '$2y$10$sCv5J5X6MtuHZwSAwVVL5.fdnpSpBDedlTNktrOr2Q.i8Lf6j.7t.');
 
 -- --------------------------------------------------------
 
@@ -114,11 +121,12 @@ CREATE TABLE `inventory` (
   `cost_price` decimal(10,2) NOT NULL DEFAULT 0.00,
   `price` decimal(10,2) NOT NULL DEFAULT 0.00,
   `product_description` text DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
   `length_cm` decimal(10,2) DEFAULT NULL,
   `width_cm` decimal(10,2) DEFAULT NULL,
   `height_cm` decimal(10,2) DEFAULT NULL,
   `weight_kg` decimal(10,2) DEFAULT NULL,
-  `image_url` varchar(255) DEFAULT NULL,
+  `qr_code` varchar(255) DEFAULT NULL,
   `minimum_order_quantity` int(11) DEFAULT 1,
   `batch_number` varchar(100) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -129,6 +137,13 @@ CREATE TABLE `inventory` (
   `products_per_box` int(11) NOT NULL DEFAULT 1,
   `supplier_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `inventory`
+--
+
+INSERT INTO `inventory` (`id`, `product_id`, `product_name`, `quantity`, `cost_price`, `price`, `product_description`, `image_url`, `length_cm`, `width_cm`, `height_cm`, `weight_kg`, `qr_code`, `minimum_order_quantity`, `batch_number`, `created_at`, `updated_at`, `threshold`, `category`, `status`, `products_per_box`, `supplier_id`) VALUES
+(1, 'PROD67ed42073261c', 'Iphone 16', 50, 50000.00, 10000000.00, '0', 'uploads/products/PROD67ed42073261c.jpg', NULL, NULL, NULL, NULL, NULL, 1, NULL, '2025-04-02 13:56:23', '2025-04-02 13:56:23', 10, 'gadget', 'Available', 10, NULL);
 
 -- --------------------------------------------------------
 
@@ -167,6 +182,27 @@ CREATE TABLE `orders` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `product_images`
+--
+
+CREATE TABLE `product_images` (
+  `id` int(11) NOT NULL,
+  `product_id` varchar(50) DEFAULT NULL,
+  `image_url` varchar(255) NOT NULL,
+  `is_primary` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `product_images`
+--
+
+INSERT INTO `product_images` (`id`, `product_id`, `image_url`, `is_primary`, `created_at`) VALUES
+(1, 'PROD67ed42073261c', 'uploads/products/PROD67ed42073261c.jpg', 1, '2025-04-02 14:17:31');
 
 -- --------------------------------------------------------
 
@@ -360,6 +396,13 @@ ALTER TABLE `orders`
   ADD KEY `idx_status` (`status`);
 
 --
+-- Indexes for table `product_images`
+--
+ALTER TABLE `product_images`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `product_id` (`product_id`);
+
+--
 -- Indexes for table `sales`
 --
 ALTER TABLE `sales`
@@ -419,144 +462,3 @@ ALTER TABLE `user_activity`
 
 --
 -- AUTO_INCREMENT for table `customers`
---
-ALTER TABLE `customers`
-  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `customer_addresses`
---
-ALTER TABLE `customer_addresses`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `deliveries`
---
-ALTER TABLE `deliveries`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `financials`
---
-ALTER TABLE `financials`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `inventory`
---
-ALTER TABLE `inventory`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `inventory_audit`
---
-ALTER TABLE `inventory_audit`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `orders`
---
-ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `sales`
---
-ALTER TABLE `sales`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `services`
---
-ALTER TABLE `services`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- AUTO_INCREMENT for table `suppliers`
---
-ALTER TABLE `suppliers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `supplier_deliveries`
---
-ALTER TABLE `supplier_deliveries`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `transactions`
---
-ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `users`
---
-ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- AUTO_INCREMENT for table `user_activity`
---
-ALTER TABLE `user_activity`
-  MODIFY `activity_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- Constraints for dumped tables
---
-
---
--- Constraints for table `customer_addresses`
---
-ALTER TABLE `customer_addresses`
-  ADD CONSTRAINT `customer_addresses_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`);
-
---
--- Constraints for table `deliveries`
---
-ALTER TABLE `deliveries`
-  ADD CONSTRAINT `deliveries_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`);
-
---
--- Constraints for table `inventory`
---
-ALTER TABLE `inventory`
-  ADD CONSTRAINT `inventory_ibfk_1` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`);
-
---
--- Constraints for table `inventory_audit`
---
-ALTER TABLE `inventory_audit`
-  ADD CONSTRAINT `inventory_audit_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventory` (`id`),
-  ADD CONSTRAINT `inventory_audit_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
-
---
--- Constraints for table `orders`
---
-ALTER TABLE `orders`
-  ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`),
-  ADD CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `inventory` (`product_id`);
-
---
--- Constraints for table `supplier_deliveries`
---
-ALTER TABLE `supplier_deliveries`
-  ADD CONSTRAINT `supplier_deliveries_ibfk_1` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`),
-  ADD CONSTRAINT `supplier_deliveries_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `inventory` (`product_id`);
-
---
--- Constraints for table `transactions`
---
-ALTER TABLE `transactions`
-  ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`);
-
---
--- Constraints for table `user_activity`
---
-ALTER TABLE `user_activity`
-  ADD CONSTRAINT `user_activity_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
-COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

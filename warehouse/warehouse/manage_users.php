@@ -196,6 +196,7 @@ $result = $conn->query($query);
     <h2>Admin Dashboard</h2>
     <a href="admin_dashboard.php">Dashboard</a>
     <a href="manage_users.php">Manage Users</a>
+    <a href="manage_products.php">Manage Products</a>
     <a href="inventory.php">Manage Inventory</a>
     <a href="orders.php">Manage Orders</a>
     <a href="reports.php">Reports</a>

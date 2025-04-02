@@ -3,12 +3,16 @@ session_start();
 include 'db.php';
 
 // Check if user is logged in and get role
-$is_logged_in = isset($_SESSION['customer_id']) || isset($_SESSION['admin_id']);
-$is_admin = isset($_SESSION['admin_id']);
+$is_logged_in = isset($_SESSION['user_id']) || isset($_SESSION['customer_id']);
+$is_admin = isset($_SESSION['user_id']) && $_SESSION['role'] == 'admin';
 
 // Fetch available products with prepared statement if not admin
 if (!$is_admin) {
-    $products_query = "SELECT * FROM inventory WHERE status = 'Available' AND quantity > 0";
+    $products_query = "SELECT i.*, GROUP_CONCAT(pi.image_url) as images 
+                      FROM inventory i 
+                      LEFT JOIN product_images pi ON i.product_id = pi.product_id 
+                      WHERE i.status = 'Available' AND i.quantity > 0 
+                      GROUP BY i.product_id";
     $result = $conn->query($products_query);
     
     if (!$result) {
@@ -28,19 +32,28 @@ if (!$is_admin) {
         $customer_info = $customer_result->fetch_assoc();
 
         // Fetch recent orders
-        $orders_query = "SELECT o.*, i.product_name FROM orders o 
-        JOIN inventory i ON o.product_id = i.product_id 
-        WHERE o.customer_id = ? ORDER BY o.order_date DESC LIMIT 5";
+        $orders_query = "SELECT o.id, o.order_date, o.total_amount, o.status, 
+                        GROUP_CONCAT(i.product_name) as products,
+                        GROUP_CONCAT(oi.quantity) as quantities
+                        FROM orders o 
+                        JOIN order_items oi ON o.id = oi.order_id
+                        JOIN inventory i ON oi.product_id = i.product_id
+                        WHERE o.customer_id = ? 
+                        GROUP BY o.id
+                        ORDER BY o.order_date DESC LIMIT 5";
         $stmt = $conn->prepare($orders_query);
         $stmt->bind_param("i", $customer_id);
         $stmt->execute();
         $recent_orders = $stmt->get_result();
 
         // Fetch recent deliveries
-        $deliveries_query = "SELECT d.*, o.product_id, i.product_name FROM deliveries d 
-        JOIN orders o ON d.order_id = o.id 
-        JOIN inventory i ON o.product_id = i.product_id 
-        WHERE o.customer_id = ? ORDER BY d.delivery_date DESC LIMIT 5";
+        $deliveries_query = "SELECT d.*, oi.product_id, i.product_name 
+                           FROM deliveries d 
+                           JOIN orders o ON d.order_id = o.id
+                           JOIN order_items oi ON o.id = oi.order_id
+                           JOIN inventory i ON oi.product_id = i.product_id
+                           WHERE o.customer_id = ? 
+                           ORDER BY d.delivery_date DESC LIMIT 5";
         $stmt = $conn->prepare($deliveries_query);
         $stmt->bind_param("i", $customer_id);
         $stmt->execute();
@@ -148,6 +161,7 @@ if (!$is_admin) {
             background-color: white;
             overflow: hidden;
             position: relative;
+            cursor: pointer;
         }
         
         .product-card:hover {
@@ -270,6 +284,42 @@ if (!$is_admin) {
             padding-top: 20px;
             border-top: 1px solid rgba(255,255,255,0.1);
         }
+
+        .modal-body img {
+            border-radius: 8px;
+            max-height: 400px;
+            object-fit: contain;
+        }
+
+        .carousel-control-prev,
+        .carousel-control-next {
+            width: 10%;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .carousel-control-prev:hover,
+        .carousel-control-next:hover {
+            background: rgba(0,0,0,0.3);
+        }
+
+        .modal-dialog {
+            max-width: 800px;
+        }
+
+        .modal-content {
+            border-radius: 15px;
+            border: none;
+        }
+
+        .modal-header {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
     </style>
 </head>
 <body>
@@ -281,20 +331,26 @@ if (!$is_admin) {
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <?php if ($is_admin): ?>
-                        <li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="inventory.php">Inventory</a></li>
-                        <li class="nav-item"><a class="nav-link" href="orders.php">Orders</a></li>
-                        <li class="nav-item"><a class="nav-link" href="reports.php">Reports</a></li>
-                        <li class="nav-item"><a class="nav-link" href="manage_users.php">Users</a></li>
+                    <?php if (isset($_SESSION['user_id'])): ?>
+                        <?php if ($_SESSION['role'] == 'admin'): ?>
+                            <li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link" href="manage_users.php">Manage Users</a></li>
+                            <li class="nav-item"><a class="nav-link" href="manage_products.php">Manage Products</a></li>
+                            <li class="nav-item"><a class="nav-link" href="inventory.php">Manage Inventory</a></li>
+                            <li class="nav-item"><a class="nav-link" href="orders.php">Manage Orders</a></li>
+                            <li class="nav-item"><a class="nav-link" href="reports.php">Reports</a></li>
+                        <?php endif; ?>
                         <li class="nav-item"><a class="nav-link" href="warehouse_logout.php">Logout</a></li>
                     <?php elseif (isset($_SESSION['customer_id'])): ?>
-                        <li class="nav-item"><a class="nav-link" href="customer_orders.php">My Orders</a></li>
+                        <li class="nav-item"><a class="nav-link" href="my_orders.php">My Orders</a></li>
+                        <li class="nav-item"><a class="nav-link" href="my_profile.php">Profile</a></li>
                         <li class="nav-item"><a class="nav-link" href="request_delivery.php">Request Delivery</a></li>
-                        <li class="nav-item"><a class="nav-link" href="customer_profile.php">Profile</a></li>
-                        <li class="nav-item"><a class="nav-link" href="customer_logout.php">Logout</a></li>
+                        <li class="nav-item"><a class="nav-link" href="view_cart.php">
+                            Cart <span class="badge bg-primary"><?php echo count($_SESSION['cart'] ?? []); ?></span>
+                        </a></li>
+                        <li class="nav-item"><a class="nav-link" href="warehouse_logout.php">Logout</a></li>
                     <?php else: ?>
-                        <li class="nav-item"><a class="nav-link" href="warehouse_login.php">Login</a></li>
+                        <li class="nav-item"><a class="nav-link" href="login.php">Login</a></li>
                         <li class="nav-item"><a class="nav-link" href="customer_register.php">Register</a></li>
                     <?php endif; ?>
                 </ul>
@@ -305,10 +361,18 @@ if (!$is_admin) {
     <!-- Hero Section -->
     <div class="hero-section">
         <div class="hero-content">
-            <h1 class="hero-title">Welcome to Olympus Warehouse</h1>
-            <p class="hero-subtitle">Your Trusted Partner in Storage and Logistics</p>
-            <?php if (!isset($_SESSION['customer_id']) && !isset($_SESSION['admin_id'])): ?>
-            <a href="customer_register.php" class="btn btn-primary btn-lg">Get Started</a>
+            <?php if (isset($_SESSION['user_id'])): ?>
+                <h1 class="hero-title">WELCOME, <?php echo strtoupper($_SESSION['user_name']); ?></h1>
+                <p class="hero-subtitle">Access Your Admin Dashboard</p>
+                <a href="admin_dashboard.php" class="btn btn-primary btn-lg">Go to Dashboard</a>
+            <?php elseif (isset($_SESSION['customer_id'])): ?>
+                <h1 class="hero-title">WELCOME, <?php echo strtoupper($_SESSION['customer_name']); ?></h1>
+                <p class="hero-subtitle">Your Trusted Partner in Storage and Logistics</p>
+                <a href="view_cart.php" class="btn btn-primary btn-lg">View Cart</a>
+            <?php else: ?>
+                <h1 class="hero-title">WELCOME TO OLYMPUS WAREHOUSE</h1>
+                <p class="hero-subtitle">Your Trusted Partner in Storage and Logistics</p>
+                <a href="login.php" class="btn btn-primary btn-lg">Get Started</a>
             <?php endif; ?>
         </div>
     </div>
@@ -349,75 +413,6 @@ if (!$is_admin) {
         <?php if ($is_admin): ?>
             <!-- Admin Redirect -->
             <script>window.location.href = 'admin_dashboard.php';</script>
-        <?php elseif (isset($_SESSION['customer_id'])): ?>
-            <!-- Customer Dashboard -->
-            <h2>Welcome, <?php echo htmlspecialchars($customer_info['customer_name']); ?></h2>
-            
-            <!-- Dashboard Summary -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Recent Orders</h4>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Order Date</th>
-                                            <th>Product</th>
-                                            <th>Status</th>
-                                            <th>Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php while ($order = $recent_orders->fetch_assoc()): ?>
-                                        <tr>
-                                            <td><?php echo date('Y-m-d', strtotime($order['order_date'])); ?></td>
-                                            <td><?php echo htmlspecialchars($order['product_name']); ?></td>
-                                            <td><span class="badge bg-<?php echo $order['status'] == 'Completed' ? 'success' : 'warning'; ?>"><?php echo $order['status']; ?></span></td>
-                                            <td>$<?php echo number_format($order['total_amount'], 2); ?></td>
-                                        </tr>
-                                        <?php endwhile; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Recent Deliveries</h4>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Delivery Date</th>
-                                            <th>Product</th>
-                                            <th>Status</th>
-                                            <th>Tracking</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php while ($delivery = $recent_deliveries->fetch_assoc()): ?>
-                                        <tr>
-                                            <td><?php echo date('Y-m-d', strtotime($delivery['delivery_date'])); ?></td>
-                                            <td><?php echo htmlspecialchars($delivery['product_name']); ?></td>
-                                            <td><span class="badge bg-<?php echo $delivery['status'] == 'Delivered' ? 'success' : 'info'; ?>"><?php echo $delivery['status']; ?></span></td>
-                                            <td><?php echo $delivery['tracking_number'] ? $delivery['tracking_number'] : 'N/A'; ?></td>
-                                        </tr>
-                                        <?php endwhile; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         <?php endif; ?>
 
         <?php if (!$is_admin): ?>
@@ -479,30 +474,164 @@ if (!$is_admin) {
 
             <!-- Available Products Section -->
             <section class="mb-5">
-                <h3 class="mb-4">Available Products</h3>
+                <h3 class="section-title">Available Products</h3>
+                <?php if (isset($_SESSION['success'])): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <?php 
+                        echo $_SESSION['success'];
+                        unset($_SESSION['success']);
+                        ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (isset($_SESSION['error'])): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <?php 
+                        echo $_SESSION['error'];
+                        unset($_SESSION['error']);
+                        ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <?php endif; ?>
                 <div class="row">
-                    <?php while ($product = $result->fetch_assoc()): ?>
+                    <?php while ($product = $result->fetch_assoc()): 
+                        $images = $product['images'] ? explode(',', $product['images']) : [];
+                    ?>
                     <div class="col-md-4 mb-4">
-                        <div class="card product-card">
+                        <div class="card product-card" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#productModal-<?php echo $product['product_id']; ?>">
+                            <?php if (!empty($images)): ?>
+                                <div id="carousel-<?php echo $product['product_id']; ?>" class="carousel slide" data-bs-ride="carousel">
+                                    <div class="carousel-inner">
+                                        <?php foreach($images as $index => $image): ?>
+                                            <div class="carousel-item <?php echo $index === 0 ? 'active' : ''; ?>">
+                                                <img src="<?php echo htmlspecialchars($image); ?>" 
+                                                     class="card-img-top" 
+                                                     alt="<?php echo htmlspecialchars($product['product_name']); ?>" 
+                                                     style="height: 200px; object-fit: cover;">
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <?php if (count($images) > 1): ?>
+                                        <button class="carousel-control-prev" type="button" 
+                                                data-bs-target="#carousel-<?php echo $product['product_id']; ?>" 
+                                                data-bs-slide="prev">
+                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Previous</span>
+                                        </button>
+                                        <button class="carousel-control-next" type="button" 
+                                                data-bs-target="#carousel-<?php echo $product['product_id']; ?>" 
+                                                data-bs-slide="next">
+                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Next</span>
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <i class="fas fa-box fa-3x text-secondary"></i>
+                                </div>
+                            <?php endif; ?>
                             <div class="card-body">
                                 <h5 class="card-title"><?php echo htmlspecialchars($product['product_name']); ?></h5>
-                                <p class="card-text"><?php echo htmlspecialchars($product['product_description']); ?></p>
-                                <p class="card-text">
-                                    <strong>Price:</strong> $<?php echo number_format($product['price'], 2); ?><br>
-                                    <strong>Available:</strong> <?php echo $product['quantity']; ?> units
-                                </p>
-                                <?php if (isset($_SESSION['customer_id'])): ?>
-                                <form action="add_to_cart.php" method="POST">
-                                    <input type="hidden" name="product_id" value="<?php echo htmlspecialchars($product['product_id']); ?>">
-                                    <div class="mb-3">
-                                        <label for="quantity" class="form-label">Quantity</label>
-                                        <input type="number" class="form-control" id="quantity" name="quantity" min="1" max="<?php echo $product['quantity']; ?>" required>
+                                <p class="card-text text-muted"><?php echo htmlspecialchars($product['category']); ?></p>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="h5 mb-0">$<?php echo number_format($product['price'], 2); ?></span>
+                                    <span class="badge bg-<?php echo $product['quantity'] > $product['threshold'] ? 'success' : 'warning'; ?>">
+                                        <?php echo $product['quantity']; ?> in stock
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product Modal -->
+                        <div class="modal fade" id="productModal-<?php echo $product['product_id']; ?>" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title"><?php echo htmlspecialchars($product['product_name']); ?></h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
-                                    <button type="submit" class="btn btn-primary">Add to Cart</button>
-                                </form>
-                                <?php else: ?>
-                                <a href="customer_login.php" class="btn btn-primary">Login to Order</a>
-                                <?php endif; ?>
+                                    <div class="modal-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <?php if (!empty($images)): ?>
+                                                    <div id="modalCarousel-<?php echo $product['product_id']; ?>" class="carousel slide" data-bs-ride="carousel">
+                                                        <div class="carousel-inner">
+                                                            <?php foreach($images as $index => $image): ?>
+                                                                <div class="carousel-item <?php echo $index === 0 ? 'active' : ''; ?>">
+                                                                    <img src="<?php echo htmlspecialchars($image); ?>" 
+                                                                         class="d-block w-100" 
+                                                                         alt="<?php echo htmlspecialchars($product['product_name']); ?>" 
+                                                                         style="height: 300px; object-fit: cover;">
+                                                                </div>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                        <?php if (count($images) > 1): ?>
+                                                            <button class="carousel-control-prev" type="button" 
+                                                                    data-bs-target="#modalCarousel-<?php echo $product['product_id']; ?>" 
+                                                                    data-bs-slide="prev">
+                                                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                                <span class="visually-hidden">Previous</span>
+                                                            </button>
+                                                            <button class="carousel-control-next" type="button" 
+                                                                    data-bs-target="#modalCarousel-<?php echo $product['product_id']; ?>" 
+                                                                    data-bs-slide="next">
+                                                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                                <span class="visually-hidden">Next</span>
+                                                            </button>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <div class="bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
+                                                        <i class="fas fa-box fa-5x text-secondary"></i>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h4 class="mb-3"><?php echo htmlspecialchars($product['product_name']); ?></h4>
+                                                <p class="text-muted mb-2">Category: <?php echo htmlspecialchars($product['category']); ?></p>
+                                                <p class="h3 mb-4">$<?php echo number_format($product['price'], 2); ?></p>
+                                                <div class="mb-4">
+                                                    <h5>Description:</h5>
+                                                    <p><?php echo htmlspecialchars($product['product_description'] ?: 'No description available.'); ?></p>
+                                                </div>
+                                                <div class="mb-4">
+                                                    <h5>Product Details:</h5>
+                                                    <ul class="list-unstyled">
+                                                        <li><strong>Stock:</strong> <?php echo $product['quantity']; ?> units</li>
+                                                        <li><strong>Products per Box:</strong> <?php echo $product['products_per_box']; ?></li>
+                                                        <li><strong>Minimum Order:</strong> <?php echo $product['minimum_order_quantity']; ?> units</li>
+                                                    </ul>
+                                                </div>
+                                                <?php if (isset($_SESSION['customer_id'])): ?>
+                                                    <div class="d-flex gap-2">
+                                                        <form action="add_to_cart.php" method="POST" class="flex-grow-1">
+                                                            <input type="hidden" name="product_id" value="<?php echo htmlspecialchars($product['product_id']); ?>">
+                                                            <div class="input-group">
+                                                                <input type="number" class="form-control" name="quantity" min="1" max="<?php echo $product['quantity']; ?>" value="1" required>
+                                                                <button type="submit" class="btn btn-outline-primary">
+                                                                    <i class="fas fa-cart-plus"></i> Add to Cart
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                        <form action="payment.php" method="POST">
+                                                            <input type="hidden" name="product_id" value="<?php echo htmlspecialchars($product['product_id']); ?>">
+                                                            <input type="hidden" name="quantity" value="1">
+                                                            <button type="submit" class="btn btn-primary">
+                                                                <i class="fas fa-shopping-bag"></i> Buy Now
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <a href="customer_login.php" class="btn btn-primary w-100">
+                                                        <i class="fas fa-sign-in-alt"></i> Login to Order
+                                                    </a>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

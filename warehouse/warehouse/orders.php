@@ -45,9 +45,18 @@ if (isset($_POST['update'])) {
     header("Location: orders.php");
 }
 
-// Read - Fetch all orders
-$query = "SELECT * FROM orders";
-$result = $conn->query($query);
+// Get orders with customer and product information
+$order_query = "SELECT o.id, o.order_date, o.total_amount, o.status, 
+                CONCAT(c.fname, ' ', c.lname) as customer_name,
+                GROUP_CONCAT(i.product_name) as products,
+                GROUP_CONCAT(oi.quantity) as quantities
+                FROM orders o
+                JOIN customers c ON o.customer_id = c.customer_id
+                JOIN order_items oi ON o.id = oi.order_id
+                JOIN inventory i ON oi.product_id = i.product_id
+                GROUP BY o.id
+                ORDER BY o.order_date DESC";
+$order_result = $conn->query($order_query);
 ?>
 
 <!DOCTYPE html>
@@ -207,6 +216,7 @@ $result = $conn->query($query);
     <h2>Admin Dashboard</h2>
     <a href="admin_dashboard.php">Dashboard</a>
     <a href="manage_users.php">Manage Users</a>
+    <a href="manage_products.php">Manage Products</a>
     <a href="inventory.php">Manage Inventory</a>
     <a href="orders.php">Manage Orders</a>
     <a href="reports.php">Reports</a>
@@ -227,60 +237,38 @@ $result = $conn->query($query);
                 <th>Order Date</th>
                 <th>Total Amount</th>
                 <th>Status</th>
+                <th>Products</th>
+                <th>Quantities</th>
                 <th>Action</th>
             </tr>
         </thead>
         <tbody>
-            <?php while ($row = $result->fetch_assoc()) { ?>
+            <?php while ($row = $order_result->fetch_assoc()): ?>
                 <tr>
                     <td><?php echo $row['id']; ?></td>
-                    <td><?php echo $row['customer_name']; ?></td>
+                    <td><?php echo htmlspecialchars($row['customer_name'] ?? 'Unknown Customer'); ?></td>
                     <td><?php echo $row['order_date']; ?></td>
-                    <td><?php echo $row['total_amount']; ?></td>
-                    <td><?php echo $row['status']; ?></td>
+                    <td>$<?php echo number_format($row['total_amount'], 2); ?></td>
                     <td>
-                        <a href="orders.php?delete=<?php echo $row['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?');">Delete</a>
-                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editModal<?php echo $row['id']; ?>">Edit</button>
+                        <span class="badge bg-<?php 
+                            echo $row['status'] == 'Completed' ? 'success' : 
+                                ($row['status'] == 'Processing' ? 'warning' : 'secondary'); 
+                        ?>">
+                            <?php echo $row['status']; ?>
+                        </span>
+                    </td>
+                    <td><?php echo htmlspecialchars($row['products'] ?? 'No products'); ?></td>
+                    <td><?php echo $row['quantities'] ?? '0'; ?></td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="?action=accept&id=<?php echo $row['id']; ?>" class="btn btn-success btn-sm">Accept</a>
+                            <a href="?action=cancel&id=<?php echo $row['id']; ?>" class="btn btn-warning btn-sm">Cancel</a>
+                            <a href="?action=pending&id=<?php echo $row['id']; ?>" class="btn btn-info btn-sm">Pending</a>
+                            <a href="?action=delete&id=<?php echo $row['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this order?');">Delete</a>
+                        </div>
                     </td>
                 </tr>
-
-                <!-- Edit Modal -->
-                <div class="modal fade" id="editModal<?php echo $row['id']; ?>" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="editModalLabel">Edit Order</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <form action="orders.php" method="POST">
-                                    <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
-                                    <div class="mb-3">
-                                        <label for="customer_name" class="form-label">Customer Name</label>
-                                        <input type="text" class="form-control" id="customer_name" name="customer_name" value="<?php echo $row['customer_name']; ?>" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="order_date" class="form-label">Order Date</label>
-                                        <input type="date" class="form-control" id="order_date" name="order_date" value="<?php echo $row['order_date']; ?>" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="total_amount" class="form-label">Total Amount</label>
-                                        <input type="number" step="0.01" class="form-control" id="total_amount" name="total_amount" value="<?php echo $row['total_amount']; ?>" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="status" class="form-label">Status</label>
-                                        <select name="status" class="form-control" required>
-                                            <option value="Pending" <?php if ($row['status'] == 'Pending') echo 'selected'; ?>>Pending</option>
-                                            <option value="Completed" <?php if ($row['status'] == 'Completed') echo 'selected'; ?>>Completed</option>
-                                        </select>
-                                    </div>
-                                    <button type="submit" name="update" class="btn btn-primary">Update Order</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php } ?>
+            <?php endwhile; ?>
         </tbody>
     </table>
 </div>
