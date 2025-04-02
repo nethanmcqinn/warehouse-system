@@ -219,20 +219,7 @@ $result = mysqli_query($conn, $query);
 <div class="main-content">
     <h1>Warehouse Inventory</h1>
     
-    <!-- Add Product Form (Admin only) -->
-    <?php if ($is_admin): ?>
-        <form method="POST" class="mb-3">
-            <div class="input-group">
-                <input type="text" name="product_name" class="form-control" placeholder="Product Name" required>
-                <input type="number" name="quantity" class="form-control" placeholder="Quantity" required>
-                <input type="text" name="description" class="form-control" placeholder="Description" required>
-                <input type="number" name="threshold" class="form-control" placeholder="Threshold" required>
-                <input type="number" name="products_per_box" class="form-control" placeholder="Products per Box" required>
-                <input type="number" name="price" class="form-control" placeholder="Price" required> <!-- New field for price -->
-                <button type="submit" name="add" class="btn btn-primary">Add Product</button>
-            </div>
-        </form>
-    <?php endif; ?>
+    <!-- Product Form Removed -->
 
     <!-- Inventory Table -->
     <table class="table table-bordered">

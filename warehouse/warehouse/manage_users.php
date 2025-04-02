@@ -8,19 +8,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-// Create - Add a new user
-if (isset($_POST['add'])) {
-    $fname = $_POST['first_name'];
-    $lname = $_POST['last_name'];
-    $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    $role = $_POST['role'];
-    $query = "INSERT INTO users (fname, lname, email, password, role) VALUES (?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("ssssi", $fname, $lname, $email, $password, $role);
-    $stmt->execute();
-    header("Location: manage_users.php");
-}
+// User management code
 
 // Delete - Remove a user
 if (isset($_GET['delete'])) {
@@ -216,21 +204,6 @@ $result = $conn->query($query);
 
 <div class="main-content">
     <h1>Manage Users</h1>
-    
-    <!-- Add User Form -->
-    <form method="POST" class="mb-3">
-        <div class="input-group">
-            <input type="text" name="first_name" class="form-control" placeholder="First Name" required>
-            <input type="text" name="last_name" class="form-control" placeholder="Last Name" required>
-            <input type="email" name="email" class="form-control" placeholder="Email" required>
-            <input type="password" name="password" class="form-control" placeholder="Password" required>
-            <select name="role" class="form-control" required>
-                <option value="0">Admin</option>
-                <option value="1">Staff</option>
-            </select>
-            <button type="submit" name="add" class="btn btn-primary">Add User</button>
-        </div>
-    </form>
 
     <!-- Users Table -->
     <table class="table table-bordered">

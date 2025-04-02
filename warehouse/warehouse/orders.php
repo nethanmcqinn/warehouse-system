@@ -216,19 +216,7 @@ $result = $conn->query($query);
 <div class="main-content">
     <h1>Manage Orders</h1>
     
-    <!-- Add Order Form -->
-    <form method="POST" class="mb-3">
-        <div class="input-group">
-            <input type="text" name="customer_name" class="form-control" placeholder="Customer Name" required>
-            <input type="date" name="order_date" class="form-control" placeholder="Order Date" required>
-            <input type="number" step="0.01" name="total_amount" class="form-control" placeholder="Total Amount" required>
-            <select name="status" class="form-control" required>
-                <option value="Pending">Pending</option>
-                <option value="Completed">Completed</option>
-            </select>
-            <button type="submit" name="add" class="btn btn-primary">Add Order</button>
-        </div>
-    </form>
+    <!-- Order Form Removed -->
 
     <!-- Orders Table -->
     <table class="table table-bordered">
