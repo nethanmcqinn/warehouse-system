@@ -59,13 +59,6 @@ if (isset($_POST['update'])) {
                 <label class="form-label">Email</label>
                 <input type="email" name="email" class="form-control" value="<?php echo $user['email']; ?>" required>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Role</label>
-                <select name="role" class="form-control" required>
-                    <option value="0" <?php if ($user['role'] == 0) echo 'selected'; ?>>Admin</option>
-                    <option value="1" <?php if ($user['role'] == 1) echo 'selected'; ?>>Staff</option>
-                </select>
-            </div>
             <button type="submit" name="update" class="btn btn-success">Update User</button>
             <a href="manage_users.php" class="btn btn-secondary">Cancel</a>
         </form>

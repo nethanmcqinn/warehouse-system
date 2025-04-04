@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'db.php'; // Include the database connection
+require_once 'notifications.php';
 
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -31,6 +32,45 @@ if (isset($_POST['update'])) {
     $stmt->bind_param("ssdsi", $customer_name, $order_date, $total_amount, $status, $id);
     $stmt->execute();
     header("Location: admin_dashboard.php");
+}
+
+// Check if user is admin
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $orderId = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
+    $status = isset($_POST['status']) ? $_POST['status'] : '';
+    $notes = isset($_POST['notes']) ? $_POST['notes'] : '';
+
+    if ($orderId && $status) {
+        // Update order status and create notification
+        $success = updateOrderStatus($orderId, $status, $_SESSION['user_id'], $conn);
+
+        if ($success) {
+            // Add notes if provided
+            if ($notes) {
+                $stmt = $conn->prepare("INSERT INTO order_status_history (order_id, status, notes, created_by) VALUES (?, ?, ?, ?)");
+                $stmt->bind_param("issi", $orderId, $status, $notes, $_SESSION['user_id']);
+                $stmt->execute();
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Order status updated successfully']);
+        } else {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Error updating order status']);
+        }
+    } else {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Invalid order ID or status']);
+    }
+} else {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
 }
 ?>
 

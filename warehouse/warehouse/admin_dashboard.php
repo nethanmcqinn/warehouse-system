@@ -1,10 +1,11 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header("Location: warehouse_login.php");
     exit();
 }
 include 'db.php'; // Include the database connection
+include 'sidebar.php';
 
 // Handle order actions
 if (isset($_GET['action']) && isset($_GET['id'])) {
@@ -252,7 +253,7 @@ $inventory_query = "SELECT
 $low_stock_result = $conn->query($inventory_query);
 
 // Fetch suppliers from the suppliers table
-$supplier_query = "SELECT * FROM suppliers";
+$supplier_query = "SELECT id, supplier_name, contact_name, contact_email, contact_phone, address, business_type FROM suppliers ORDER BY supplier_name ASC";
 $supplier_result = $conn->query($supplier_query);
 ?>
 <!DOCTYPE html>
@@ -387,152 +388,187 @@ $supplier_result = $conn->query($supplier_query);
     </style>
 </head>
 <body>
-<div class="sidebar">
-    <h2>Admin Dashboard</h2>
-    <a href="admin_dashboard.php">Dashboard</a>
-    <a href="manage_users.php">Manage Users</a>
-    <a href="manage_products.php">Manage Products</a>
-    <a href="inventory.php">Manage Inventory</a>
-    <a href="orders.php">Manage Orders</a>
-    <a href="manage_suppliers.php">Manage Suppliers</a>
-    <a href="reports.php">Reports</a>
-    <a href="warehouse_logout.php" class="logout">Logout</a>
-</div>
-<div class="main-content">
-    <h1>Welcome, Admin</h1>
-    
-    <!-- Low Stock Alerts -->
-    <div class="card mb-4">
-        <div class="card-header bg-danger text-white">
-            <h3 class="mb-0">Low Stock Alerts</h3>
-        </div>
-        <div class="card-body">
-            <?php if ($low_stock_result && $low_stock_result->num_rows > 0): ?>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Source</th>
-                                <th>Product</th>
-                                <th>Current Stock</th>
-                                <th>Threshold</th>
-                                <th>Supplier</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while ($row = $low_stock_result->fetch_assoc()): ?>
+    <div class="main-content">
+        <h1>Welcome, Admin</h1>
+        
+        <!-- Low Stock Alerts -->
+        <div class="card mb-4">
+            <div class="card-header bg-danger text-white">
+                <h3 class="mb-0">Low Stock Alerts</h3>
+            </div>
+            <div class="card-body">
+                <?php if ($low_stock_result && $low_stock_result->num_rows > 0): ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
                                 <tr>
-                                    <td><?php echo $row['source']; ?></td>
-                                    <td><?php echo htmlspecialchars($row['product_name']); ?></td>
-                                    <td>
-                                        <span class="badge bg-danger"><?php echo $row['current_stock']; ?></span>
-                                    </td>
-                                    <td><?php echo $row['threshold']; ?></td>
-                                    <td><?php echo $row['supplier_name'] ? htmlspecialchars($row['supplier_name']) : 'N/A'; ?></td>
-                                    <td>
-                                        <?php if ($row['source'] == 'Internal'): ?>
-                                            <a href="manage_products.php?action=edit&id=<?php echo $row['product_id']; ?>" 
-                                               class="btn btn-primary btn-sm">Update Stock</a>
-                                        <?php else: ?>
-                                            <a href="manage_suppliers.php?action=create_order&supplier_id=<?php echo $row['supplier_id']; ?>&product_id=<?php echo $row['product_id']; ?>" 
-                                               class="btn btn-primary btn-sm">Create Order</a>
-                                        <?php endif; ?>
-                                    </td>
+                                    <th>Source</th>
+                                    <th>Product</th>
+                                    <th>Current Stock</th>
+                                    <th>Threshold</th>
+                                    <th>Supplier</th>
+                                    <th>Action</th>
                                 </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php else: ?>
-                <p class="text-success mb-0">No low stock alerts at the moment.</p>
-            <?php endif; ?>
+                            </thead>
+                            <tbody>
+                                <?php while ($row = $low_stock_result->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?php echo $row['source']; ?></td>
+                                        <td><?php echo htmlspecialchars($row['product_name']); ?></td>
+                                        <td>
+                                            <span class="badge bg-danger"><?php echo $row['current_stock']; ?></span>
+                                        </td>
+                                        <td><?php echo $row['threshold']; ?></td>
+                                        <td><?php echo $row['supplier_name'] ? htmlspecialchars($row['supplier_name']) : 'N/A'; ?></td>
+                                        <td>
+                                            <?php if ($row['source'] == 'Internal'): ?>
+                                                <a href="manage_products.php?action=edit&id=<?php echo $row['product_id']; ?>" 
+                                                   class="btn btn-primary btn-sm">Update Stock</a>
+                                            <?php else: ?>
+                                                <a href="manage_suppliers.php?action=create_order&supplier_id=<?php echo $row['supplier_id']; ?>&product_id=<?php echo $row['product_id']; ?>" 
+                                                   class="btn btn-primary btn-sm">Create Order</a>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <p class="text-success mb-0">No low stock alerts at the moment.</p>
+                <?php endif; ?>
+            </div>
         </div>
+
+        <!-- Orders Table -->
+        <h2>Orders</h2>
+        <table class="table table-bordered">
+            <thead class="bg-dark text-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Customer Name</th>
+                    <th>Order Date</th>
+                    <th>Total Amount</th>
+                    <th>Status</th>
+                    <th>Products</th>
+                    <th>Quantities</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while ($row = $order_result->fetch_assoc()) { ?>
+                    <tr>
+                        <td><?php echo $row['id']; ?></td>
+                        <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
+                        <td><?php echo $row['order_date']; ?></td>
+                        <td><?php echo number_format($row['total_amount'], 2); ?></td>
+                        <td><?php echo $row['status']; ?></td>
+                        <td><?php echo htmlspecialchars($row['products']); ?></td>
+                        <td><?php echo $row['quantities']; ?></td>
+                        <td>
+                            <a href="admin_dashboard.php?action=accept&id=<?php echo $row['id']; ?>" class="btn btn-success btn-sm">Accept</a>
+                            <a href="admin_dashboard.php?action=cancel&id=<?php echo $row['id']; ?>" class="btn btn-warning btn-sm">Cancel</a>
+                            <a href="admin_dashboard.php?action=pending&id=<?php echo $row['id']; ?>" class="btn btn-info btn-sm">Pending</a>
+                            <a href="admin_dashboard.php?action=delete&id=<?php echo $row['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?');">Delete</a>
+                        </td>
+                    </tr>
+                <?php } ?>
+            </tbody>
+        </table>
+
+        <!-- Deliveries Table -->
+        <h2>Deliveries</h2>
+        <table class="table table-bordered">
+            <thead class="bg-dark text-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Order ID</th>
+                    <th>Delivery Date</th>
+                    <th>Status</th>
+                    <th>Shipping Address</th>
+                    <th>Shipping Notes</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php 
+                // Get deliveries with order information
+                $delivery_query = "SELECT d.*, o.id as order_id, 
+                                 CONCAT(c.fname, ' ', c.lname) as customer_name,
+                                 GROUP_CONCAT(i.product_name) as products,
+                                 GROUP_CONCAT(oi.quantity) as quantities
+                                 FROM deliveries d
+                                 JOIN orders o ON d.order_id = o.id
+                                 JOIN customers c ON o.customer_id = c.customer_id
+                                 JOIN order_items oi ON o.id = oi.order_id
+                                 JOIN inventory i ON oi.product_id = i.product_id
+                                 GROUP BY d.id
+                                 ORDER BY d.delivery_date DESC";
+                $delivery_result = $conn->query($delivery_query);
+                
+                while ($row = $delivery_result->fetch_assoc()) { ?>
+                    <tr>
+                        <td><?php echo $row['id']; ?></td>
+                        <td><?php echo $row['order_id']; ?></td>
+                        <td><?php echo $row['delivery_date']; ?></td>
+                        <td><?php echo $row['status']; ?></td>
+                        <td><?php echo htmlspecialchars($row['shipping_address']); ?></td>
+                        <td><?php echo htmlspecialchars($row['shipping_notes']); ?></td>
+                        <td>
+                            <a href="admin_dashboard.php?action=deliver&id=<?php echo $row['id']; ?>" class="btn btn-success btn-sm">Mark as Delivered</a>
+                            <a href="admin_dashboard.php?action=delete_delivery&id=<?php echo $row['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?');">Delete</a>
+                        </td>
+                    </tr>
+                <?php } ?>
+            </tbody>
+        </table>
+
+        <!-- Suppliers/Partners Table -->
+        <h2>Suppliers/Partners</h2>
+        <table class="table table-bordered">
+            <thead class="bg-dark text-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Supplier Name</th>
+                    <th>Contact Person</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Business Type</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php 
+                // Get suppliers with their details
+                $supplier_query = "SELECT id, supplier_name, contact_name, contact_email, contact_phone, address, business_type FROM suppliers ORDER BY supplier_name ASC";
+                $supplier_result = $conn->query($supplier_query);
+                
+                while ($row = $supplier_result->fetch_assoc()) { ?>
+                    <tr>
+                        <td><?php echo $row['id']; ?></td>
+                        <td><?php echo htmlspecialchars($row['supplier_name']); ?></td>
+                        <td><?php echo htmlspecialchars($row['contact_name']); ?></td>
+                        <td><?php echo htmlspecialchars($row['contact_email']); ?></td>
+                        <td><?php echo htmlspecialchars($row['contact_phone']); ?></td>
+                        <td><?php echo htmlspecialchars($row['address']); ?></td>
+                        <td><?php echo htmlspecialchars($row['business_type']); ?></td>
+                        <td>
+                            <span class="badge bg-success">
+                                Active
+                            </span>
+                        </td>
+                        <td>
+                            <a href="manage_suppliers.php?action=edit&id=<?php echo $row['id']; ?>" class="btn btn-primary btn-sm">Edit</a>
+                            <a href="manage_suppliers.php?action=view&id=<?php echo $row['id']; ?>" class="btn btn-info btn-sm">View Products</a>
+                            <a href="manage_suppliers.php?action=create_order&supplier_id=<?php echo $row['id']; ?>" class="btn btn-success btn-sm">Create Order</a>
+                        </td>
+                    </tr>
+                <?php } ?>
+            </tbody>
+        </table>
     </div>
-
-    <!-- Orders Table -->
-    <h2>Orders</h2>
-    <table class="table table-bordered">
-        <thead class="bg-dark text-light">
-            <tr>
-                <th>ID</th>
-                <th>Customer Name</th>
-                <th>Order Date</th>
-                <th>Total Amount</th>
-                <th>Status</th>
-                <th>Products</th>
-                <th>Quantities</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php while ($row = $order_result->fetch_assoc()) { ?>
-                <tr>
-                    <td><?php echo $row['id']; ?></td>
-                    <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
-                    <td><?php echo $row['order_date']; ?></td>
-                    <td><?php echo number_format($row['total_amount'], 2); ?></td>
-                    <td><?php echo $row['status']; ?></td>
-                    <td><?php echo htmlspecialchars($row['products']); ?></td>
-                    <td><?php echo $row['quantities']; ?></td>
-                    <td>
-                        <a href="admin_dashboard.php?action=accept&id=<?php echo $row['id']; ?>" class="btn btn-success btn-sm">Accept</a>
-                        <a href="admin_dashboard.php?action=cancel&id=<?php echo $row['id']; ?>" class="btn btn-warning btn-sm">Cancel</a>
-                        <a href="admin_dashboard.php?action=pending&id=<?php echo $row['id']; ?>" class="btn btn-info btn-sm">Pending</a>
-                        <a href="admin_dashboard.php?action=delete&id=<?php echo $row['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?');">Delete</a>
-                    </td>
-                </tr>
-            <?php } ?>
-        </tbody>
-    </table>
-
-    <!-- Deliveries Table -->
-    <h2>Deliveries</h2>
-    <table class="table table-bordered">
-        <thead class="bg-dark text-light">
-            <tr>
-                <th>ID</th>
-                <th>Order ID</th>
-                <th>Delivery Date</th>
-                <th>Status</th>
-                <th>Shipping Address</th>
-                <th>Shipping Notes</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php 
-            // Get deliveries with order information
-            $delivery_query = "SELECT d.*, o.id as order_id, 
-                             CONCAT(c.fname, ' ', c.lname) as customer_name,
-                             GROUP_CONCAT(i.product_name) as products,
-                             GROUP_CONCAT(oi.quantity) as quantities
-                             FROM deliveries d
-                             JOIN orders o ON d.order_id = o.id
-                             JOIN customers c ON o.customer_id = c.customer_id
-                             JOIN order_items oi ON o.id = oi.order_id
-                             JOIN inventory i ON oi.product_id = i.product_id
-                             GROUP BY d.id
-                             ORDER BY d.delivery_date DESC";
-            $delivery_result = $conn->query($delivery_query);
-            
-            while ($row = $delivery_result->fetch_assoc()) { ?>
-                <tr>
-                    <td><?php echo $row['id']; ?></td>
-                    <td><?php echo $row['order_id']; ?></td>
-                    <td><?php echo $row['delivery_date']; ?></td>
-                    <td><?php echo $row['status']; ?></td>
-                    <td><?php echo htmlspecialchars($row['shipping_address']); ?></td>
-                    <td><?php echo htmlspecialchars($row['shipping_notes']); ?></td>
-                    <td>
-                        <a href="admin_dashboard.php?action=deliver&id=<?php echo $row['id']; ?>" class="btn btn-success btn-sm">Mark as Delivered</a>
-                        <a href="admin_dashboard.php?action=delete_delivery&id=<?php echo $row['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?');">Delete</a>
-                    </td>
-                </tr>
-            <?php } ?>
-        </tbody>
-    </table>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

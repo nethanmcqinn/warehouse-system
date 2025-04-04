@@ -5,6 +5,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 include 'db.php';
+include 'sidebar.php';
 
 // Handle supplier actions
 if (isset($_POST['add_supplier'])) {
@@ -147,7 +148,7 @@ if (isset($_POST['supply_inventory'])) {
 }
 
 // Fetch suppliers
-$suppliers_query = "SELECT * FROM suppliers ORDER BY supplier_name";
+$suppliers_query = "SELECT id, supplier_name, contact_name, contact_email, contact_phone, address, business_type FROM suppliers ORDER BY supplier_name";
 $suppliers_result = $conn->query($suppliers_query);
 
 // Fetch products
@@ -223,6 +224,7 @@ $all_inventory_result = $conn->query($all_inventory_query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Suppliers - Olympus Warehouse</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -230,421 +232,227 @@ $all_inventory_result = $conn->query($all_inventory_query);
             margin: 0;
             padding: 0;
             display: flex;
-            height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            background-color: #333;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-        }
-
-        .sidebar h2 {
-            text-align: center;
-            margin-bottom: 1.5rem;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .sidebar a {
-            color: white;
-            text-decoration: none;
-            padding: 10px;
-            margin: 5px 0;
-            display: block;
-            border-radius: 5px;
-            transition: background 0.3s ease;
-        }
-
-        .sidebar a:hover {
-            background: #555;
-        }
-
-        .sidebar .logout {
-            margin-top: auto;
-            background-color: #d9534f;
-        }
-
-        .sidebar .logout:hover {
-            background-color: #c9302c;
+            min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
         }
 
         .main-content {
             flex: 1;
             padding: 20px;
-            overflow-y: auto;
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        .main-content h1 {
-            margin-bottom: 1.5rem;
+        .content-wrapper {
+            width: 95%;
+            max-width: 1400px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 30px;
             color: #333;
-            text-transform: uppercase;
-            letter-spacing: 2px;
             font-size: 2rem;
+            font-weight: 600;
         }
 
-        .card {
+        .add-supplier-btn {
             margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: right;
         }
 
-        .card-header {
-            background-color: #333;
-            color: white;
-            padding: 15px;
-            border-radius: 8px 8px 0 0;
-        }
-
-        .card-header h3 {
-            margin: 0;
-            font-size: 1.25rem;
-        }
-
-        .nav-tabs .nav-link {
-            color: #333;
+        .add-supplier-btn .btn {
+            padding: 8px 20px;
             font-weight: 500;
         }
 
-        .nav-tabs .nav-link.active {
-            font-weight: 600;
-            border-bottom: 3px solid #007bff;
+        .table {
+            width: 100%;
+            margin-bottom: 0;
+            border-collapse: separate;
+            border-spacing: 0;
         }
 
         .table th {
+            background-color: #333;
+            color: white;
+            padding: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .table td {
+            padding: 12px;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+
+        .table tbody tr:hover {
             background-color: #f8f9fa;
-            font-weight: 600;
         }
 
-        .btn-primary {
-            background-color: #007bff;
-            border: none;
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
+            text-align: center;
         }
 
-        .btn-primary:hover {
-            background-color: #0056b3;
+        .status-active {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .action-buttons {
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        .action-buttons .btn {
+            padding: 5px 10px;
+            margin: 0 2px;
+            font-size: 0.85rem;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            margin: 0 -25px;
+            padding: 0 25px;
+        }
+
+        @media (max-width: 1200px) {
+            .content-wrapper {
+                width: 100%;
+                padding: 15px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <h2>Admin Dashboard</h2>
-        <a href="admin_dashboard.php">Dashboard</a>
-        <a href="manage_users.php">Manage Users</a>
-        <a href="manage_products.php">Manage Products</a>
-        <a href="inventory.php">Manage Inventory</a>
-        <a href="orders.php">Manage Orders</a>
-        <a href="manage_suppliers.php">Manage Suppliers</a>
-        <a href="reports.php">Reports</a>
-        <a href="warehouse_logout.php" class="logout">Logout</a>
-    </div>
-
     <div class="main-content">
-        <h1>Manage Business Partners</h1>
-
-        <?php if (isset($_SESSION['success'])): ?>
-            <div class="alert alert-success"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
-        <?php endif; ?>
-        
-        <?php if (isset($_SESSION['error'])): ?>
-            <div class="alert alert-danger"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
-        <?php endif; ?>
-
-        <ul class="nav nav-tabs mb-4" id="supplierTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="low-stock-tab" data-bs-toggle="tab" data-bs-target="#low-stock" type="button" role="tab">
-                    Low Stock Alerts
+        <div class="content-wrapper">
+            <h1 class="page-title">Manage Suppliers/Partners</h1>
+            
+            <div class="add-supplier-btn">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                    <i class="bi bi-plus-circle"></i> Add New Supplier
                 </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="add-supplier-tab" data-bs-toggle="tab" data-bs-target="#add-supplier" type="button" role="tab">
-                    Add New Partner
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="all-inventory-tab" data-bs-toggle="tab" data-bs-target="#all-inventory" type="button" role="tab">
-                    Partner Inventory
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="recent-orders-tab" data-bs-toggle="tab" data-bs-target="#recent-orders" type="button" role="tab">
-                    Recent Supply History
-                </button>
-            </li>
-        </ul>
-
-        <div class="tab-content" id="supplierTabContent">
-            <!-- Low Stock Alerts Tab -->
-            <div class="tab-pane fade show active" id="low-stock" role="tabpanel">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Low Stock Alerts</h3>
-                    </div>
-                    <div class="card-body">
-                        <?php if ($low_stock_result && $low_stock_result->num_rows > 0): ?>
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Business Partner</th>
-                                        <th>Product</th>
-                                        <th>Current Stock</th>
-                                        <th>Threshold</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php while ($row = $low_stock_result->fetch_assoc()): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($row['supplier_name']); ?></td>
-                                            <td><?php echo htmlspecialchars($row['product_name']); ?></td>
-                                            <td>
-                                                <span class="badge bg-danger"><?php echo $row['current_stock']; ?></span>
-                                            </td>
-                                            <td><?php echo $row['threshold']; ?></td>
-                                            <td>
-                                                <a href="?action=supply&supplier_id=<?php echo $row['supplier_id']; ?>&product_id=<?php echo $row['product_id']; ?>" 
-                                                   class="btn btn-primary btn-sm">Supply Inventory</a>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                </tbody>
-                            </table>
-                        <?php else: ?>
-                            <p class="text-success mb-0">No low stock alerts at the moment.</p>
-                        <?php endif; ?>
-                    </div>
-                </div>
             </div>
 
-            <!-- Add New Supplier Tab -->
-            <div class="tab-pane fade" id="add-supplier" role="tabpanel">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Add New Business Partner</h3>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST">
-                            <div class="mb-3">
-                                <label>Business Name</label>
-                                <input type="text" name="name" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label>Business Type</label>
-                                <select name="business_type" class="form-control" required>
-                                    <option value="Mall">Mall</option>
-                                    <option value="Retail Store">Retail Store</option>
-                                    <option value="Distributor">Distributor</option>
-                                    <option value="Wholesaler">Wholesaler</option>
-                                    <option value="Manufacturer">Manufacturer</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label>Contact Person</label>
-                                <input type="text" name="contact_person" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label>Email</label>
-                                <input type="email" name="email" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label>Phone</label>
-                                <input type="text" name="phone" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label>Address</label>
-                                <textarea name="address" class="form-control" required></textarea>
-                            </div>
-                            <button type="submit" name="add_supplier" class="btn btn-primary">Add Business Partner</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- All Inventory Tab -->
-            <div class="tab-pane fade" id="all-inventory" role="tabpanel">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Partner Inventory Management</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-4">
-                            <h4>Supply Inventory to Partner</h4>
-                            <form method="POST" class="row g-3">
-                                <div class="col-md-4">
-                                    <label>Select Partner</label>
-                                    <select name="supplier_id" class="form-control" required>
-                                        <option value="">-- Select Partner --</option>
-                                        <?php
-                                        $suppliers_result->data_seek(0);
-                                        while ($row = $suppliers_result->fetch_assoc()): ?>
-                                            <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['supplier_name']); ?></option>
-                                        <?php endwhile; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label>Select Product</label>
-                                    <select name="product_id" class="form-control" required>
-                                        <option value="">-- Select Product --</option>
-                                        <?php
-                                        $products_result->data_seek(0);
-                                        while ($row = $products_result->fetch_assoc()): ?>
-                                            <option value="<?php echo $row['product_id']; ?>"><?php echo htmlspecialchars($row['product_name']); ?></option>
-                                        <?php endwhile; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <label>Quantity</label>
-                                    <input type="number" name="quantity" class="form-control" required min="1">
-                                </div>
-                                <div class="col-md-2">
-                                    <label>&nbsp;</label>
-                                    <button type="submit" name="supply_inventory" class="btn btn-primary form-control">Supply</button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <h4 class="mt-4">Current Partner Inventory</h4>
-                        <?php if ($all_inventory_result && $all_inventory_result->num_rows > 0): ?>
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Business Partner</th>
-                                        <th>Product</th>
-                                        <th>Current Stock</th>
-                                        <th>Threshold</th>
-                                        <th>Status</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php while ($row = $all_inventory_result->fetch_assoc()): 
-                                        $stock_status = $row['current_stock'] <= $row['threshold'] ? 'danger' : 
-                                                        ($row['current_stock'] <= $row['threshold']*1.5 ? 'warning' : 'success');
-                                    ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($row['supplier_name']); ?></td>
-                                            <td><?php echo htmlspecialchars($row['product_name']); ?></td>
-                                            <td><?php echo $row['current_stock']; ?></td>
-                                            <td><?php echo $row['threshold']; ?></td>
-                                            <td>
-                                                <span class="badge bg-<?php echo $stock_status; ?>">
-                                                    <?php 
-                                                    echo $stock_status == 'danger' ? 'Low Stock' : 
-                                                        ($stock_status == 'warning' ? 'Running Low' : 'In Stock'); 
-                                                    ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <a href="?action=supply&supplier_id=<?php echo $row['supplier_id']; ?>&product_id=<?php echo $row['product_id']; ?>" 
-                                                   class="btn btn-primary btn-sm">Supply</a>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                </tbody>
-                            </table>
-                        <?php else: ?>
-                            <p>No inventory records found. Supply inventory to partners to see records here.</p>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Orders Tab -->
-            <div class="tab-pane fade" id="recent-orders" role="tabpanel">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Recent Supply History</h3>
-                    </div>
-                    <div class="card-body">
-                        <?php if ($orders_result && $orders_result->num_rows > 0): ?>
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Order ID</th>
-                                        <th>Partner</th>
-                                        <th>Date</th>
-                                        <th>Products</th>
-                                        <th>Quantities</th>
-                                        <th>Total Amount</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php while ($row = $orders_result->fetch_assoc()): ?>
-                                        <tr>
-                                            <td><?php echo $row['id']; ?></td>
-                                            <td><?php echo htmlspecialchars($row['supplier_name']); ?></td>
-                                            <td><?php echo $row['order_date']; ?></td>
-                                            <td><?php echo $row['products']; ?></td>
-                                            <td><?php echo $row['quantities']; ?></td>
-                                            <td>$<?php echo number_format($row['total_amount'], 2); ?></td>
-                                            <td>
-                                                <span class="badge bg-<?php 
-                                                    echo $row['status'] == 'Delivered' ? 'success' : 
-                                                        ($row['status'] == 'Processing' ? 'warning' : 'secondary'); 
-                                                ?>">
-                                                    <?php echo $row['status']; ?>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                </tbody>
-                            </table>
-                        <?php else: ?>
-                            <p>No supply history found.</p>
-                        <?php endif; ?>
-                    </div>
-                </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Company Name</th>
+                            <th>Contact Person</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Address</th>
+                            <th>Business Type</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $query = "SELECT * FROM suppliers ORDER BY id ASC";
+                        $result = $conn->query($query);
+                        
+                        while ($row = $result->fetch_assoc()) {
+                            echo "<tr>";
+                            echo "<td>{$row['id']}</td>";
+                            echo "<td>{$row['supplier_name']}</td>";
+                            echo "<td>{$row['contact_name']}</td>";
+                            echo "<td>{$row['contact_email']}</td>";
+                            echo "<td>{$row['contact_phone']}</td>";
+                            echo "<td>{$row['address']}</td>";
+                            echo "<td>{$row['business_type']}</td>";
+                            echo "<td><span class='status-badge status-active'>Active</span></td>";
+                            echo "<td class='action-buttons'>";
+                            echo "<button class='btn btn-info btn-sm' title='View'><i class='bi bi-eye'></i></button> ";
+                            echo "<button class='btn btn-warning btn-sm' title='Edit'><i class='bi bi-pencil'></i></button> ";
+                            echo "<button class='btn btn-success btn-sm' title='Inventory'><i class='bi bi-box'></i></button> ";
+                            echo "<button class='btn btn-danger btn-sm' title='Delete'><i class='bi bi-trash'></i></button>";
+                            echo "</td>";
+                            echo "</tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- Supply Inventory Modal -->
-    <div class="modal fade" id="supplyModal" tabindex="-1">
+    <!-- Add Supplier Modal -->
+    <div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Supply Inventory</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title" id="addSupplierModalLabel">Add New Supplier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <?php if (isset($_SESSION['supply_details'])): ?>
-                        <p><strong>Partner:</strong> <?php echo htmlspecialchars($_SESSION['supply_details']['supplier_name']); ?></p>
-                        <p><strong>Product:</strong> <?php echo htmlspecialchars($_SESSION['supply_details']['product_name']); ?></p>
-                    <?php endif; ?>
-                    <form method="POST" id="supplyForm">
-                        <input type="hidden" name="supplier_id" id="supply_supplier_id">
-                        <input type="hidden" name="product_id" id="supply_product_id">
+                <form action="" method="POST">
+                    <div class="modal-body">
                         <div class="mb-3">
-                            <label>Quantity to Supply</label>
-                            <input type="number" name="quantity" class="form-control" required min="1">
+                            <label for="name" class="form-label">Company Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
                         </div>
-                        <button type="submit" name="supply_inventory" class="btn btn-primary">Supply Inventory</button>
-                    </form>
-                </div>
+                        <div class="mb-3">
+                            <label for="contact_person" class="form-label">Contact Person</label>
+                            <input type="text" class="form-control" id="contact_person" name="contact_person" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="business_type" class="form-label">Business Type</label>
+                            <select class="form-select" id="business_type" name="business_type" required>
+                                <option value="">Select Business Type</option>
+                                <option value="Manufacturer">Manufacturer</option>
+                                <option value="Wholesaler">Wholesaler</option>
+                                <option value="Distributor">Distributor</option>
+                                <option value="Retailer">Retailer</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" name="add_supplier" class="btn btn-primary">Add Supplier</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Get the tab from URL if present
-        document.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tab = urlParams.get('tab');
-            if (tab) {
-                const tabElement = document.querySelector(`#${tab}-tab`);
-                if (tabElement) {
-                    const tabInstance = new bootstrap.Tab(tabElement);
-                    tabInstance.show();
-                }
+        function deleteSupplier(id) {
+            if (confirm('Are you sure you want to delete this supplier?')) {
+                window.location.href = '?action=delete&id=' + id;
             }
-        });
+        }
     </script>
 </body>
 </html> 

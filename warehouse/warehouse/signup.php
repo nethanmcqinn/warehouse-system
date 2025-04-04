@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
             // Insert into database
-            $sql = "INSERT INTO users (fname, lname, email, password) VALUES (?, ?, ?, ?)";
+            $sql = "INSERT INTO users (fname, lname, email, password, role) VALUES (?, ?, ?, ?, 0)";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssss", $fname, $lname, $email, $hashed_password);
 
@@ -93,7 +93,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <div class="signup-container">
-        <h2>Warehouse Signup</h2>
+        <h2>Admin Signup</h2>
         <?php if (!empty($error)) echo "<p class='error-message'>$error</p>"; ?>
         <form method="POST">
             <div class="mb-3">

@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             
             // Insert new admin user
-            $stmt = $conn->prepare('INSERT INTO users (fname, lname, email, password, role, created_at) VALUES (?, ?, ?, ?, "admin", CURRENT_TIMESTAMP)');
+            $stmt = $conn->prepare('INSERT INTO users (fname, lname, email, password, role, created_at) VALUES (?, ?, ?, ?, 0, CURRENT_TIMESTAMP)');
             $stmt->bind_param('ssss', $fname, $lname, $email, $hashed_password);
             
             if ($stmt->execute()) {

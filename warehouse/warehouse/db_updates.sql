@@ -132,3 +132,36 @@ ALTER TABLE supplier_deliveries MODIFY id INT AUTO_INCREMENT;
 ALTER TABLE transactions MODIFY id INT AUTO_INCREMENT;
 ALTER TABLE users MODIFY id INT AUTO_INCREMENT;
 ALTER TABLE user_activity MODIFY activity_id INT AUTO_INCREMENT;
+
+-- Create notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    link VARCHAR(255),
+    FOREIGN KEY (user_id) REFERENCES customers(customer_id)
+);
+
+-- Add order_status_history table for tracking order status changes
+CREATE TABLE IF NOT EXISTS order_status_history (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+-- Add notification_preferences table
+CREATE TABLE IF NOT EXISTS notification_preferences (
+    user_id INT PRIMARY KEY,
+    email_notifications BOOLEAN DEFAULT TRUE,
+    order_updates BOOLEAN DEFAULT TRUE,
+    promotional_emails BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (user_id) REFERENCES customers(customer_id)
+);
